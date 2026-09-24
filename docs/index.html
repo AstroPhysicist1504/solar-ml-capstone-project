@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silicon-Scale Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #EFF3F6;
+    --surface: #FFFFFF;
+    --surface-2: #F7FAFC;
+    --text: #12181F;
+    --text-muted: #55606D;
+    --accent-solar: #C97A1B;
+    --accent-solar-soft: #EFD9B8;
+    --accent-load: #1B8A87;
+    --accent-load-soft: #C9E9E7;
+    --positive: #2F9E5B;
+    --negative: #C24A3F;
+    --border: #D7DEE5;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151C;
+      --surface: #171E28;
+      --surface-2: #1D2530;
+      --text: #EDEFF2;
+      --text-muted: #8B94A3;
+      --accent-solar: #F2A93B;
+      --accent-solar-soft: #3A2F17;
+      --accent-load: #4FC3C0;
+      --accent-load-soft: #16302F;
+      --positive: #6FCF97;
+      --negative: #E38178;
+      --border: #2A323D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151C;
+    --surface: #171E28;
+    --surface-2: #1D2530;
+    --text: #EDEFF2;
+    --text-muted: #8B94A3;
+    --accent-solar: #F2A93B;
+    --accent-solar-soft: #3A2F17;
+    --accent-load: #4FC3C0;
+    --accent-load-soft: #16302F;
+    --positive: #6FCF97;
+    --negative: #E38178;
+    --border: #2A323D;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display {
+    font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header.top {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 0 22px;
+    background: var(--surface);
+  }
+  .project-code {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+  }
+  header.top h1 {
+    font-size: clamp(22px, 3.2vw, 30px);
+    margin: 0 0 6px;
+  }
+  header.top p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 640px;
+  }
+
+  nav.tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; }
+  nav.tabs button {
+    appearance: none;
+    background: none;
+    border: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 14px 16px 12px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button.active {
+    color: var(--text);
+    border-bottom-color: var(--accent-solar);
+  }
+  nav.tabs button:focus-visible { outline: 2px solid var(--accent-load); outline-offset: -2px; }
+
+  main { padding: 36px 0 80px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade-in 0.25s ease; }
+  @media (prefers-reduced-motion: reduce) { .panel.active { animation: none; } }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title { font-size: 20px; margin: 0 0 6px; }
+  .section-sub { color: var(--text-muted); font-size: 14.5px; margin: 0 0 28px; max-width: 640px; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-solar);
+    padding: 18px 20px;
+  }
+  .stat-card.load { border-left-color: var(--accent-load); }
+  .stat-card .num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .stat-card .label { color: var(--text-muted); font-size: 13.5px; }
+
+  .narrative {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-size: 14.5px;
+    max-width: 720px;
+  }
+  .narrative p { margin: 0 0 10px; }
+  .narrative p:last-child { margin-bottom: 0; }
+  .narrative strong { color: var(--text); }
+
+  .chart-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 22px 12px;
+    margin-bottom: 28px;
+  }
+  .chart-box h3 { font-size: 15px; margin: 0 0 16px; font-weight: 600; }
+  .chart-canvas-wrap { position: relative; height: 320px; }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+  table.data-table caption {
+    text-align: left;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  table.data-table th, table.data-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table thead th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12.5px;
+  }
+  table.data-table tbody tr:last-child td { border-bottom: none; }
+  .pos { color: var(--positive); }
+  .neg { color: var(--negative); }
+  .table-scroll { overflow-x: auto; }
+
+  .overflow-wrap { overflow-x: auto; }
+
+  .method-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .method-list li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    font-size: 14.5px;
+  }
+  .method-list li .m-title { font-weight: 600; margin-bottom: 4px; }
+  .method-list li .m-body { color: var(--text-muted); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 0 40px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .chart-canvas-wrap { height: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="project-code">Capstone Project Phase-I, Group CP120</p>
+    <h1>Silicon-Scale Intelligence</h1>
+    <p>Forecasting solar generation and building load with lightweight ML models, and combining the two into an energy-management coverage analysis.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <button class="active" data-tab="overview">Overview</button>
+    <button data-tab="load">Load Forecasting</button>
+    <button data-tab="pv">Solar PV Forecasting</button>
+    <button data-tab="ems">EMS Balance</button>
+    <button data-tab="demo">Live Demo</button>
+    <button data-tab="method">Methodology</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- OVERVIEW -->
+  <section class="panel active" id="panel-overview">
+    <h2 class="section-title">At a glance</h2>
+    <p class="section-sub">Two forecasting problems, solved and benchmarked independently, then combined into one energy-coverage picture.</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="num">3.37%</div>
+        <div class="label">of daily building energy demand offset by a modeled 5&nbsp;kW rooftop system</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">13.6%</div>
+        <div class="label">peak solar coverage, reached at 10:00 IST</div>
+      </div>
+      <div class="stat-card load">
+        <div class="num">ELM</div>
+        <div class="label">best load-forecasting model — wins at all three horizons tested</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">XGBoost</div>
+        <div class="label">deployed PV-forecasting model — tied-best accuracy, simplest to run</div>
+      </div>
+    </div>
+
+    <div class="narrative">
+      <p><strong>The approach.</strong> Building load and solar (PV) generation are forecast by separate pipelines — each benchmarked across three models (ELM, XGBoost, MLP) at three horizons (1, 6, and 24 hours ahead), against naive and seasonal baselines, using a chronological train/test split with equal-effort hyperparameter tuning applied to every model.</p>
+      <p><strong>The finding that shaped the EMS design.</strong> The reference building's load (roughly 16–28&nbsp;kW through the day) is several times larger than the modeled 5&nbsp;kW system's peak output (~4&nbsp;kW). Rather than force a full supply/demand balance that would trivially show "deficit" at every hour, the EMS layer instead reports <em>what share of demand solar actually covers</em> — an honest, more informative framing given the real scale relationship.</p>
+    </div>
+  </section>
+
+  <!-- LOAD -->
+  <section class="panel" id="panel-load">
+    <h2 class="section-title">Load forecasting</h2>
+    <p class="section-sub">Boys' hostel building (I-BLEND, IIIT Delhi), 2013–2017. Target: next-hour, 6-hour, and 24-hour ahead power draw.</p>
+
+    <div class="chart-box">
+      <h3>RMSE by model and horizon (lower is better)</h3>
+      <div class="chart-canvas-wrap"><canvas id="chart-load-rmse"></canvas></div>
+    </div>
+
+    <div class="narrative">
+      <p><strong>ELM is the most consistent performer</strong>, beating the strongest available baseline at every horizon by a stable ~6.7–6.8% margin regardless of how far ahead it's forecasting.</p>
+      <p><strong>6-hour-ahead is the hardest horizon</strong> for every model — a "same hour yesterday" seasonal baseline is unusually strong there, and only ELM manages to beat it.</p>
+      <p>MLP shows one instructive anomaly: its 1-hour result <em>regressed</em> after hyperparameter tuning, traced to a single validation split not generalizing to the test period — reported as-is rather than re-tuned away.</p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="data-table">
+        <caption>Full results — RMSE (W) / MAPE (%), tuned models</caption>
+        <thead>
+          <tr><th>Model</th><th>1h RMSE</th><th>1h MAPE</th><th>6h RMSE</th><th>6h MAPE</th><th>24h RMSE</th><th>24h MAPE</th></tr>
+        </thead>
+        <tbody id="load-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PV -->
+  <section class="panel" id="panel-pv">
+    <h2 class="section-title">Solar PV forecasting</h2>
+    <p class="section-sub">Delhi (NASA POWER, 2020–2024), converted to PV power via pvlib physical modeling for a nominal 5&nbsp;kW system. Daylight-only evaluation.</p>
+
+    <div class="chart-box">
+      <h3>RMSE by model and horizon, daylight hours only (lower is better)</h3>
+      <div class="chart-canvas-wrap"><canvas id="chart-pv-rmse"></canvas></div>
+    </div>
+
+    <div class="narrative">
+      <p><strong>All three models decisively beat every baseline at every horizon</strong> — a much cleaner result than load forecasting, because real-time weather features (cloud amount, clear-sky index) give the models information no naive time-based rule can access.</p>
+      <p><strong>The advantage shrinks predictably with horizon</strong>: from ~65% better than the toughest baseline at 1 hour, to ~15% at 24 hours — current weather is highly informative about the very next hour, less so a full day out.</p>
+      <p>XGBoost and MLP are essentially tied on accuracy throughout; <strong>XGBoost was selected for the EMS pipeline</strong> for deployment reasons — no scaler artifacts to keep synchronized, bounded output behavior, and built-in feature importance.</p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="data-table">
+        <caption>Full results — RMSE (kW) / MAPE (%), tuned models, daylight-only scope</caption>
+        <thead>
+          <tr><th>Model</th><th>1h RMSE</th><th>1h MAPE</th><th>6h RMSE</th><th>6h MAPE</th><th>24h RMSE</th><th>24h MAPE</th></tr>
+        </thead>
+        <tbody id="pv-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- EMS -->
+  <section class="panel" id="panel-ems">
+    <h2 class="section-title">EMS balance: solar coverage of load</h2>
+    <p class="section-sub">Both models' 1-hour-ahead predictions combined by hour-of-day (IST) into a composite-day profile — the two datasets don't share real calendar dates, so this is a representative-day estimate, not a literal date-matched forecast.</p>
+
+    <div class="chart-box">
+      <h3>Predicted load vs. predicted PV output, by hour of day</h3>
+      <div class="chart-canvas-wrap"><canvas id="chart-ems-overlay"></canvas></div>
+    </div>
+
+    <div class="chart-box">
+      <h3>Solar coverage of load, by hour of day</h3>
+      <div class="chart-canvas-wrap"><canvas id="chart-ems-coverage"></canvas></div>
+    </div>
+
+    <div class="narrative">
+      <p><strong>Load and generation run almost in anti-phase.</strong> Load bottoms out at 15.9&nbsp;kW around 6:00, right as the sun is only just rising, and peaks at 28.3&nbsp;kW at 18:00 — right after the sun has set. Solar's own peak (~2.4&nbsp;kW, around 10:00–11:00) lands in a period when load is comparatively low but still 7–8× larger than what the system can supply.</p>
+      <p>The result is a modest but real contribution: solar covers a meaningful <strong>10–14% of load during late morning</strong>, tapering to effectively nothing outside daylight hours — consistent with a small rooftop system supplementing, not replacing, grid supply for a building of this size.</p>
+    </div>
+  </section>
+
+
+  <!-- LIVE DEMO -->
+  <section class="panel" id="panel-demo">
+    <h2 class="section-title">Live model demo</h2>
+    <p class="section-sub">Genuine in-browser inference using the actual trained model weights &mdash; not a lookup table of pre-computed answers. Pick a day type, then drag the cloud-cover slider: both models recompute their predictions together, live, for whatever combination you choose.</p>
+
+    <div id="demo-loading" style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px;">
+      Loading trained model weights (~1&nbsp;MB)&hellip;
+    </div>
+
+    <div id="demo-content" style="display:none;">
+    <div class="chart-box">
+      <h3>Scenario controls</h3>
+      <label for="day-type-select" style="font-size:13.5px;color:var(--text-muted);display:block;margin-bottom:8px;">Day type (each is a real historical scenario &mdash; load and PV come from their own respective datasets, combined as a composite day, consistent with the Methodology tab):</label>
+      <select id="day-type-select" style="width:100%;max-width:480px;padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);margin-bottom:20px;"></select>
+
+      <label for="cloud-slider" style="font-size:13.5px;color:var(--text-muted);display:block;margin-bottom:8px;">Cloud cover override: <strong id="cloud-slider-value" style="color:var(--text);">&mdash;</strong></label>
+      <input type="range" id="cloud-slider" min="0" max="100" value="50" style="width:100%;max-width:480px;margin-bottom:10px;accent-color:var(--accent-solar);">
+      <div id="scenario-mode-note" style="font-size:13px;margin-bottom:4px;"></div>
+    </div>
+
+    <div class="chart-box">
+      <h3>Combined live prediction</h3>
+      <div class="stat-grid">
+        <div class="stat-card load">
+          <div class="num" id="unified-load-pred">&mdash;</div>
+          <div class="label">Predicted load (ELM), this hour + 1</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="unified-pv-pred">&mdash;</div>
+          <div class="label">Predicted PV output (XGBoost), this hour + 1</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="unified-coverage">&mdash;</div>
+          <div class="label">Resulting solar coverage of load</div>
+        </div>
+      </div>
+      <div id="ground-truth-panel" style="margin-top:18px;font-size:13.5px;color:var(--text-muted);"></div>
+    </div>
+
+    <div class="narrative">
+      <p><strong>How this works.</strong> Both models' trained parameters were exported directly from the training run and run here as real computation &mdash; the ELM's random-projection matrices and output weights, and XGBoost's full 500-tree ensemble &mdash; executed in JavaScript, not pre-recorded per combination. The cloud-cover slider rewrites the weather-dependent inputs (GHI, DNI, diffuse irradiance, clear-sky index, cloud amount) proportionally from each scenario's real recorded values before both models re-run &mdash; so moving it explores a genuine hypothetical, not a different lookup entry. Predictions typically match the original Python output to within a small fraction of a percent; tiny residual differences come from XGBoost's internal use of 32-bit floating point in places versus 64-bit here.</p>
+    </div>
+    </div> <!-- /demo-content -->
+  </section>
+
+  <!-- METHODOLOGY -->
+  <section class="panel" id="panel-method">
+    <h2 class="section-title">Methodology notes</h2>
+    <p class="section-sub">Decisions made to keep the model comparison fair and the results defensible.</p>
+
+    <ul class="method-list">
+      <li>
+        <div class="m-title">Chronological train/test splits, no shuffling</div>
+        <div class="m-body">Every split respects time order — training always precedes testing, with a further chronological sub-split used for hyperparameter validation. This prevents the model from ever training on data that comes after what it's being tested on.</div>
+      </li>
+      <li>
+        <div class="m-title">Equal-budget hyperparameter tuning across all three models</div>
+        <div class="m-body">Each model (ELM, XGBoost, MLP) receives the same tuning effort — four hyperparameter combinations, two knobs each — so no model is favored by receiving more attention than the others.</div>
+      </li>
+      <li>
+        <div class="m-title">Benchmarked against the strongest baseline, not a convenient one</div>
+        <div class="m-body">Three naive baselines (plain persistence, 24-hour-seasonal, 168-hour-seasonal) are computed at every horizon, and models are judged against whichever one is actually toughest at that horizon — not a single fixed baseline that might flatter the result.</div>
+      </li>
+      <li>
+        <div class="m-title">Daylight-only evaluation for solar</div>
+        <div class="m-body">Roughly half of all hours are night, where any model trivially predicts ~0. Evaluating across all 24 hours dilutes real forecasting error; daylight-only scoring (and daylight-only hyperparameter selection) reports the number that actually reflects forecasting skill.</div>
+      </li>
+      <li>
+        <div class="m-title">A caught and corrected pipeline bug</div>
+        <div class="m-body">An early version of the clear-sky-index feature used NaN at night as a divide-by-zero guard — which silently dropped ~48% of the PV dataset from training and testing via a blanket <code>dropna()</code>. Identified via an implausible negative PV prediction, fixed by filling with 0, and all PV results re-generated on the corrected data.</div>
+      </li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">Capstone Project Phase-I · Group CP120 · Bhilai Institute of Technology, Durg</div>
+</footer>
+
+<script>
+  // ---- Tab switching ----
+  const tabButtons = document.querySelectorAll('nav.tabs button');
+  const panels = document.querySelectorAll('.panel');
+  let modelDataLoaded = false;
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+
+      // The Live Demo tab needs the trained model weights (~1MB
+      // compressed) -- only fetch them the first time this tab is
+      // actually opened, not as part of the initial page load, so
+      // every other tab renders instantly regardless of connection.
+      if (btn.dataset.tab === 'demo' && !modelDataLoaded) {
+        modelDataLoaded = true;
+        const script = document.createElement('script');
+        script.src = 'model-data.js';
+        script.onload = () => initLiveDemo();
+        script.onerror = () => {
+          document.getElementById('demo-loading').textContent =
+            'Could not load model-data.js -- make sure it is in the same folder as this page.';
+        };
+        document.body.appendChild(script);
+      }
+    });
+  });
+
+  // ---- Theme-aware chart colors, read once at load ----
+  const cs = getComputedStyle(document.documentElement);
+  const COLOR = {
+    text: cs.getPropertyValue('--text').trim(),
+    muted: cs.getPropertyValue('--text-muted').trim(),
+    border: cs.getPropertyValue('--border').trim(),
+    solar: cs.getPropertyValue('--accent-solar').trim(),
+    load: cs.getPropertyValue('--accent-load').trim(),
+    positive: cs.getPropertyValue('--positive').trim(),
+  };
+  Chart.defaults.color = COLOR.muted;
+  Chart.defaults.borderColor = COLOR.border;
+  Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+
+  // ================= LOAD DATA =================
+  const loadHorizons = ['1h', '6h', '24h'];
+  const loadResults = {
+    'Naive':          { rmse: [4147.47, 10089.30, 5707.78], mape: [12.14, 35.26, 17.91] },
+    'Seasonal (24h)': { rmse: [5695.50, 5728.83, 5707.78],  mape: [17.39, 17.58, 17.91] },
+    'Seasonal (168h)':{ rmse: [8070.84, 8040.46, 8030.99],  mape: [28.55, 28.58, 28.72] },
+    'XGBoost':        { rmse: [3737.70, 5904.26, 5058.26],  mape: [11.77, 19.19, 16.74] },
+    'MLP':            { rmse: [4333.84, 5946.68, 5440.81],  mape: [13.32, 21.47, 18.17] },
+    'ELM':            { rmse: [3866.78, 5344.28, 5323.05],  mape: [12.46, 18.24, 17.63] },
+  };
+  const loadImprovement = {
+    'XGBoost': [9.88, -3.06, 11.38],
+    'MLP':     [-4.49, -3.80, 4.68],
+    'ELM':     [6.77, 6.71, 6.74],
+  };
+
+  new Chart(document.getElementById('chart-load-rmse'), {
+    type: 'bar',
+    data: {
+      labels: loadHorizons,
+      datasets: [
+        { label: 'XGBoost', data: loadResults['XGBoost'].rmse, backgroundColor: COLOR.load },
+        { label: 'MLP', data: loadResults['MLP'].rmse, backgroundColor: COLOR.solar },
+        { label: 'ELM', data: loadResults['ELM'].rmse, backgroundColor: COLOR.positive },
+        { label: 'Best baseline', data: [4147.47, 5728.83, 5707.78], backgroundColor: COLOR.border, type: 'line', borderColor: COLOR.text, borderDash: [4,4], pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { title: { display: true, text: 'RMSE (W)' } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  const loadTableBody = document.getElementById('load-table-body');
+  Object.entries(loadResults).forEach(([model, d]) => {
+    const isModel = ['XGBoost','MLP','ELM'].includes(model);
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${isModel ? '<strong>'+model+'</strong>' : model}</td>` +
+      d.rmse.map((v,i) => `<td>${v.toFixed(1)}</td><td>${d.mape[i].toFixed(2)}%</td>`).join('');
+    loadTableBody.appendChild(row);
+  });
+
+  // ================= PV DATA =================
+  const pvResults = {
+    'Naive':          { rmse: [0.4796, 1.6888, 0.4299], mape: [62.50, 301.92, 28.54] },
+    'Seasonal (24h)': { rmse: [0.4288, 0.3057, 0.4299], mape: [29.10, 31.68, 28.54] },
+    'Seasonal (168h)':{ rmse: [0.5523, 0.3755, 0.5541], mape: [40.19, 42.57, 39.58] },
+    'XGBoost':        { rmse: [0.1547, 0.2229, 0.3649], mape: [9.29, 24.91, 28.48] },
+    'MLP':            { rmse: [0.1465, 0.2234, 0.3651], mape: [9.91, 28.40, 30.09] },
+    'ELM':            { rmse: [0.1659, 0.2448, 0.3679], mape: [14.50, 36.96, 31.70] },
+  };
+
+  new Chart(document.getElementById('chart-pv-rmse'), {
+    type: 'bar',
+    data: {
+      labels: loadHorizons,
+      datasets: [
+        { label: 'XGBoost', data: pvResults['XGBoost'].rmse, backgroundColor: COLOR.load },
+        { label: 'MLP', data: pvResults['MLP'].rmse, backgroundColor: COLOR.solar },
+        { label: 'ELM', data: pvResults['ELM'].rmse, backgroundColor: COLOR.positive },
+        { label: 'Best baseline', data: [0.4288, 0.3057, 0.4299], backgroundColor: COLOR.border, type: 'line', borderColor: COLOR.text, borderDash: [4,4], pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { title: { display: true, text: 'RMSE (kW)' } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  const pvTableBody = document.getElementById('pv-table-body');
+  Object.entries(pvResults).forEach(([model, d]) => {
+    const isModel = ['XGBoost','MLP','ELM'].includes(model);
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${isModel ? '<strong>'+model+'</strong>' : model}</td>` +
+      d.rmse.map((v,i) => `<td>${v.toFixed(3)}</td><td>${d.mape[i].toFixed(2)}%</td>`).join('');
+    pvTableBody.appendChild(row);
+  });
+
+  // ================= EMS DATA =================
+  const hours = Array.from({length: 24}, (_, i) => i);
+  const emsLoadKw = [20.19,19.02,18.09,17.39,16.70,16.04,15.88,16.46,16.48,16.63,17.48,19.07,21.02,22.98,24.08,24.75,25.62,27.26,28.32,27.38,26.21,25.08,23.95,22.19];
+  const emsPvKw   = [0,0,0,0,0.026,0.214,0.691,1.283,1.803,2.220,2.382,2.439,2.271,1.810,1.237,0.613,0.157,0.007,0,0,0,0,0,0];
+  const emsCoverage = [0,0,0,0,0.15,1.33,4.35,7.79,10.94,13.35,13.62,12.79,10.80,7.87,5.14,2.48,0.61,0.03,0,0,0,0,0,0];
+
+  new Chart(document.getElementById('chart-ems-overlay'), {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        { label: 'Predicted Load (kW)', data: emsLoadKw, borderColor: COLOR.load, backgroundColor: COLOR.load, yAxisID: 'yLoad', tension: 0.3 },
+        { label: 'Predicted PV Output (kW)', data: emsPvKw, borderColor: COLOR.solar, backgroundColor: COLOR.solar, yAxisID: 'yPv', tension: 0.3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Hour of day (IST)' } },
+        yLoad: { position: 'left', title: { display: true, text: 'Load (kW)' } },
+        yPv: { position: 'right', title: { display: true, text: 'PV Output (kW)' }, grid: { drawOnChartArea: false } },
+      },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  new Chart(document.getElementById('chart-ems-coverage'), {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [{ label: 'Solar coverage of load (%)', data: emsCoverage, backgroundColor: COLOR.solar }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Hour of day (IST)' } },
+        y: { title: { display: true, text: 'Coverage (%)' } },
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // ================= LIVE DEMO: REAL MODEL DATA =================
+
+  // ---- ELM inference: sigmoid(X.W + b).beta, with scaling ----
+  function elmPredict(model, rawFeatures) {
+    const xScaled = rawFeatures.map((v, i) => (v - model.x_mean[i]) / model.x_scale[i]);
+    const hidden = new Array(model.n_hidden);
+    for (let h = 0; h < model.n_hidden; h++) {
+      let sum = model.b[h];
+      for (let f = 0; f < xScaled.length; f++) {
+        sum += xScaled[f] * model.W[f][h];
+      }
+      hidden[h] = 1 / (1 + Math.exp(-sum));
+    }
+    let outScaled = 0;
+    for (let h = 0; h < model.n_hidden; h++) {
+      outScaled += hidden[h] * model.beta[h];
+    }
+    return outScaled * model.y_scale[0] + model.y_mean[0];
+  }
+
+  // ---- XGBoost inference: walk the compact tree format ----
+  // Leaf = plain number. Split = [featureIdx, threshold, yesChild, noChild, missingGoesYes]
+  function evalCompactTree(node, features) {
+    if (typeof node === 'number') return node;
+    const [fidx, threshold, yesChild, noChild, missingGoesYes] = node;
+    const val = features[fidx];
+    let chosen;
+    if (val === null || val === undefined || Number.isNaN(val)) {
+      chosen = missingGoesYes ? yesChild : noChild;
+    } else if (val < threshold) {
+      chosen = yesChild;
+    } else {
+      chosen = noChild;
+    }
+    return evalCompactTree(chosen, features);
+  }
+  function xgbPredict(model, rawFeatures) {
+    let total = model.base_score;
+    for (const tree of model.trees) {
+      total += evalCompactTree(tree, rawFeatures);
+    }
+    return total;
+  }
+
+  // ---- Day-type scenarios: pair LOAD_SAMPLES[i] with PV_SAMPLES[i] ----
+  // Each side comes from its own real dataset (composite-day approach,
+  // as disclosed in Methodology) -- these labels describe the general
+  // character of each paired scenario, not a claim they're the same date.
+  const DAY_TYPES = [
+    "Scenario 1 \u2014 Weekday, warm & overcast",
+    "Scenario 2 \u2014 Weekend, mild & clear",
+    "Scenario 3 \u2014 Weekday, monsoon (heavy cloud)",
+    "Scenario 4 \u2014 Weekday, clear & hot (night hour)",
+    "Scenario 5 \u2014 Weekday, clear winter day",
+  ];
+
+  const dayTypeSelect = document.getElementById('day-type-select');
+  DAY_TYPES.forEach((label, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = label;
+    dayTypeSelect.appendChild(opt);
+  });
+
+  const cloudSlider = document.getElementById('cloud-slider');
+  const cloudSliderValue = document.getElementById('cloud-slider-value');
+
+  // ---- Rebuild PV features for a given base scenario + cloud override ----
+  // Scales GHI/DNI/diffuse/POA proportionally via the clear-sky index,
+  // using the scenario's OWN clear-sky reference (an astronomical
+  // quantity that doesn't change with weather) -- so this is a genuine
+  // recomputation, not a blend of two lookup values. At night (base
+  // clear-sky reference ~0), no amount of "less cloud" can create
+  // sunlight that isn't there -- correctly held at zero.
+  function adjustPvFeatures(baseFeatures, cloudPct) {
+    const f = Object.assign({}, baseFeatures);
+    const clrsky = baseFeatures.CLRSKY_SFC_SW_DWN;
+    if (clrsky > 1) {
+      const newClearSkyIndex = 1 - 0.9 * (cloudPct / 100);
+      const newGhi = newClearSkyIndex * clrsky;
+      const ratio = baseFeatures.ALLSKY_SFC_SW_DWN > 0.01 ? newGhi / baseFeatures.ALLSKY_SFC_SW_DWN : 0;
+      f.ALLSKY_SFC_SW_DWN = newGhi;
+      f.ALLSKY_SFC_SW_DNI = baseFeatures.ALLSKY_SFC_SW_DNI * ratio;
+      f.ALLSKY_SFC_SW_DIFF = baseFeatures.ALLSKY_SFC_SW_DIFF * ratio;
+      f.poa_global = baseFeatures.poa_global * ratio;
+      f.clear_sky_index = newClearSkyIndex;
+    }
+    f.CLOUD_AMT = cloudPct;
+    return f;
+  }
+
+  function adjustLoadFeatures(baseFeatures, cloudPct) {
+    const f = Object.assign({}, baseFeatures);
+    f.CLOUD_AMT = cloudPct;
+    return f;
+  }
+
+  function updateUnifiedDemo(resetSlider) {
+    const idx = parseInt(dayTypeSelect.value, 10);
+    const loadSample = LOAD_SAMPLES[idx];
+    const pvSample = PV_SAMPLES[idx];
+
+    if (resetSlider) {
+      cloudSlider.value = Math.round(pvSample.features.CLOUD_AMT);
+    }
+    const cloudPct = parseInt(cloudSlider.value, 10);
+    cloudSliderValue.textContent = cloudPct + '%';
+
+    const adjustedLoadFeatures = adjustLoadFeatures(loadSample.features, cloudPct);
+    const adjustedPvFeatures = adjustPvFeatures(pvSample.features, cloudPct);
+
+    const loadRaw = ELM_MODEL.feature_names.map(name => adjustedLoadFeatures[name]);
+    const pvRaw = XGB_MODEL.feature_names.map(name => adjustedPvFeatures[name]);
+
+    const loadPred = elmPredict(ELM_MODEL, loadRaw);
+    const pvPred = Math.max(0, xgbPredict(XGB_MODEL, pvRaw));
+    const coverage = loadPred > 0 ? (pvPred * 1000 / loadPred * 100) : 0;
+
+    document.getElementById('unified-load-pred').textContent = (loadPred / 1000).toFixed(2) + ' kW';
+    document.getElementById('unified-pv-pred').textContent = pvPred.toFixed(3) + ' kW';
+    document.getElementById('unified-coverage').textContent = coverage.toFixed(1) + '%';
+
+    const recordedCloud = Math.round(pvSample.features.CLOUD_AMT);
+    const isRecorded = Math.abs(cloudPct - recordedCloud) <= 3;
+    const modeNote = document.getElementById('scenario-mode-note');
+    const truthPanel = document.getElementById('ground-truth-panel');
+
+    if (isRecorded) {
+      modeNote.innerHTML = `<span style="color:var(--positive);">&#9679;</span> Matches this PV scenario's actual recorded cloud cover (${recordedCloud}%)`;
+      truthPanel.innerHTML =
+        `<strong>Actual recorded outcome for this scenario:</strong> Load was ${(loadSample.true_value_w/1000).toFixed(2)} kW, PV was ${pvSample.true_value_kw.toFixed(3)} kW. ` +
+        `Load's own historical cloud reading was ${Math.round(loadSample.features.CLOUD_AMT)}% (its composite-day pairing differs slightly from the PV scenario's ${recordedCloud}%, per the Methodology note on non-overlapping datasets).`;
+    } else {
+      modeNote.innerHTML = `<span style="color:var(--accent-solar);">&#9679;</span> Hypothetical &mdash; different from this scenario's actual recorded cloud cover (${recordedCloud}%)`;
+      truthPanel.innerHTML =
+        `<em>This is a hypothetical combination &mdash; there's no recorded real-world outcome for these exact conditions. ` +
+        `Move the slider back to ${recordedCloud}% to compare against what actually happened.</em>`;
+    }
+  }
+
+  dayTypeSelect.addEventListener('change', () => updateUnifiedDemo(true));
+  cloudSlider.addEventListener('input', () => updateUnifiedDemo(false));
+
+  // Called once model-data.js has finished loading (see the tab-click
+  // handler above) -- reveals the actual controls and runs the first
+  // real prediction, replacing the loading message.
+  function initLiveDemo() {
+    document.getElementById('demo-loading').style.display = 'none';
+    document.getElementById('demo-content').style.display = 'block';
+    updateUnifiedDemo(true);
+  }
+
+</script>
+
+</body>
+</html>
