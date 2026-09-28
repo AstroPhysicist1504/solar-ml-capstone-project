@@ -358,7 +358,7 @@
   <!-- LIVE DEMO -->
   <section class="panel" id="panel-demo">
     <h2 class="section-title">Live model demo</h2>
-    <p class="section-sub">Genuine in-browser inference using the actual trained model weights &mdash; not a lookup table of pre-computed answers. Pick a scenario, then drag the cloud-cover slider: both models recompute their predictions together, live, for whatever combination you choose.</p>
+    <p class="section-sub">Genuine in-browser inference using the actual trained model weights &mdash; not a lookup table of pre-computed answers. Pick a scenario, then drag the cloud-cover slider: the PV forecast recomputes live for whatever cloud level you choose, while the load forecast stays at its recorded inputs, because building demand does not depend on cloud cover.</p>
 
     <div id="demo-loading" style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px;">
       Loading trained model weights (~1&nbsp;MB)&hellip;
@@ -371,7 +371,7 @@
       <select id="day-type-select" style="width:100%;max-width:480px;padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);margin-bottom:10px;"></select>
       <div id="scenario-details" style="font-size:12.5px;color:var(--text-muted);max-width:640px;margin-bottom:20px;"></div>
 
-      <label for="cloud-slider" style="font-size:13.5px;color:var(--text-muted);display:block;margin-bottom:8px;">Cloud cover override: <strong id="cloud-slider-value" style="color:var(--text);">&mdash;</strong></label>
+      <label for="cloud-slider" style="font-size:13.5px;color:var(--text-muted);display:block;margin-bottom:8px;">Cloud cover override (PV forecast only): <strong id="cloud-slider-value" style="color:var(--text);">&mdash;</strong></label>
       <input type="range" id="cloud-slider" min="0" max="100" value="50" style="width:100%;max-width:480px;margin-bottom:10px;accent-color:var(--accent-solar);">
       <div id="scenario-mode-note" style="font-size:13px;margin-bottom:4px;"></div>
     </div>
@@ -396,7 +396,7 @@
     </div>
 
     <div class="narrative">
-      <p><strong>How this works.</strong> Both models' trained parameters were exported directly from the training run and run here as real computation &mdash; the ELM's random-projection matrices and output weights, and XGBoost's full 500-tree ensemble &mdash; executed in JavaScript, not pre-recorded per combination. At the recorded cloud level both models run on the real recorded inputs, so the prediction can be compared directly with what happened. Moving the slider away rewrites the irradiance inputs by interpolating the clear-sky index between clear sky (0% cloud), the recorded moment, and a heavy-overcast estimate (100%). That is an illustrative what-if, not a weather model: current output and recent history stay at their recorded values. Predictions typically match the original Python output to within a small fraction of a percent; tiny residual differences come from XGBoost's internal use of 32-bit floating point in places versus 64-bit here.</p>
+      <p><strong>How this works.</strong> Both models' trained parameters were exported directly from the training run and run here as real computation &mdash; the ELM's random-projection matrices and output weights, and XGBoost's full 500-tree ensemble &mdash; executed in JavaScript, not pre-recorded per combination. Both models run on the real recorded inputs, so their predictions can be compared directly with what happened. The cloud slider is a what-if for the PV forecast only: it rewrites the irradiance inputs by interpolating the clear-sky index between clear sky (0% cloud), the recorded moment, and a heavy-overcast estimate (100%). Building load is not driven by cloud cover, so the load forecast is held at its recorded inputs and does not respond to the slider. The PV what-if is illustrative, not a weather model: current output and recent history stay at their recorded values. Predictions typically match the original Python output to within a small fraction of a percent; tiny residual differences come from XGBoost's internal use of 32-bit floating point in places versus 64-bit here.</p>
     </div>
     </div> <!-- /demo-content -->
   </section>
@@ -711,12 +711,6 @@
     return f;
   }
 
-  function adjustLoadFeatures(baseFeatures, cloudPct) {
-    const f = Object.assign({}, baseFeatures);
-    f.CLOUD_AMT = cloudPct;
-    return f;
-  }
-
   function updateUnifiedDemo(resetSlider) {
     const idx = parseInt(dayTypeSelect.value, 10);
     const loadSample = LOAD_SAMPLES[idx];
@@ -728,11 +722,13 @@
     const cloudPct = parseInt(cloudSlider.value, 10);
     cloudSliderValue.textContent = cloudPct + '%';
 
-    // At the recorded cloud level, run both models on the exact real inputs
-    // (so the prediction is a fair comparison with what actually happened).
-    // Anywhere else, apply the what-if adjustment.
+    // Load demand does not depend on cloud cover, so the load forecast always
+    // runs on the exact recorded inputs and is unaffected by the slider.
+    // The PV forecast runs on the recorded inputs at the recorded cloud level
+    // (a fair comparison with what happened) and on the what-if adjustment
+    // anywhere else.
     const atRecorded = (cloudPct === Math.round(pvSample.features.CLOUD_AMT));
-    const adjustedLoadFeatures = atRecorded ? loadSample.features : adjustLoadFeatures(loadSample.features, cloudPct);
+    const adjustedLoadFeatures = loadSample.features;
     const adjustedPvFeatures = atRecorded ? pvSample.features : adjustPvFeatures(pvSample.features, cloudPct);
 
     const loadRaw = ELM_MODEL.feature_names.map(name => adjustedLoadFeatures[name]);
@@ -758,10 +754,11 @@
         `<strong>Actual recorded outcome for this scenario:</strong> load was ${(loadSample.true_value_w/1000).toFixed(2)} kW and PV was ${pvSample.true_value_kw.toFixed(3)} kW. ` +
         `Recorded cloud cover: ${Math.round(loadSample.features.CLOUD_AMT)}% for the load moment, ${recordedCloud}% for the PV moment (matched closely when the pair was chosen).`;
     } else {
-      modeNote.innerHTML = `<span style="color:var(--accent-solar);">&#9679;</span> Hypothetical &mdash; different from this scenario's actual recorded cloud cover (${recordedCloud}%)`;
+      modeNote.innerHTML = `<span style="color:var(--accent-solar);">&#9679;</span> PV what-if &mdash; cloud cover differs from this scenario's recorded ${recordedCloud}%; the load forecast is unchanged`;
       truthPanel.innerHTML =
-        `<em>This is a hypothetical combination &mdash; there's no recorded real-world outcome for these exact conditions. ` +
-        `Move the slider back to ${recordedCloud}% to compare against what actually happened.</em>`;
+        `<em>The PV figure is a what-if &mdash; there's no recorded outcome for these exact conditions. ` +
+        `The load forecast does not depend on cloud cover, so it still compares with the recorded load of ${(loadSample.true_value_w/1000).toFixed(2)} kW. ` +
+        `Move the slider back to ${recordedCloud}% to compare PV against the recorded ${pvSample.true_value_kw.toFixed(3)} kW.</em>`;
     }
   }
 
